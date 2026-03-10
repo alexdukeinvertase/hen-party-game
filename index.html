@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hen Party Game 💍</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+
+    <!-- ══════════════════════════════════════════
+         SCREEN 1 — Welcome
+    ══════════════════════════════════════════ -->
+    <div id="screen-welcome" class="screen active">
+      <div class="welcome-inner">
+        <div class="crown" aria-hidden="true">👑</div>
+        <h1 class="title">Hen Party Game</h1>
+        <p class="subtitle">
+          10 questions. 12 men. One winner, one loser — but it's&nbsp;never&nbsp;you&nbsp;💅
+        </p>
+        <div class="field">
+          <label for="player-name">Your name (optional)</label>
+          <input
+            id="player-name"
+            type="text"
+            placeholder="e.g. Bride's bestie"
+            autocomplete="off"
+            maxlength="40"
+          />
+        </div>
+        <button id="btn-start" class="btn btn-primary">Let's Play 🎉</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SCREEN 2 — Question
+    ══════════════════════════════════════════ -->
+    <div id="screen-question" class="screen">
+      <header class="q-header">
+        <div class="progress-bar-track">
+          <div id="progress-bar" class="progress-bar-fill"></div>
+        </div>
+        <p id="q-counter" class="q-counter">Question 1 of 10</p>
+        <h2 id="q-text" class="q-text"></h2>
+      </header>
+
+      <div id="men-grid" class="men-grid"></div>
+
+      <footer class="q-footer">
+        <button id="btn-next" class="btn btn-primary" disabled>
+          Next →
+        </button>
+      </footer>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SCREEN 3 — Results
+    ══════════════════════════════════════════ -->
+    <div id="screen-results" class="screen">
+      <div class="results-inner">
+        <h2 class="results-title">The Verdict 📊</h2>
+
+        <div class="podium">
+          <div class="podium-card podium-winner">
+            <div class="podium-badge winner-badge">🏆 Fewest Votes</div>
+            <img id="winner-img" src="" alt="Winner" class="podium-img" />
+            <p id="winner-name" class="podium-name"></p>
+            <p id="winner-votes" class="podium-votes"></p>
+          </div>
+
+          <div class="podium-card podium-loser">
+            <div class="podium-badge loser-badge">💀 Most Votes</div>
+            <img id="loser-img" src="" alt="Loser" class="podium-img" />
+            <p id="loser-name" class="podium-name"></p>
+            <p id="loser-votes" class="podium-votes"></p>
+          </div>
+        </div>
+
+        <details class="full-leaderboard">
+          <summary>See full leaderboard</summary>
+          <ol id="leaderboard-list"></ol>
+        </details>
+
+        <div id="submit-status" class="submit-status" aria-live="polite"></div>
+
+        <button id="btn-play-again" class="btn btn-secondary">
+          Play Again 🔄
+        </button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
