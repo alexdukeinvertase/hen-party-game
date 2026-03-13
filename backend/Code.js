@@ -3,7 +3,10 @@
  * Handles player join claims, voting, and admin control.
  */
 
-const HOST_CODE = 'HEN2026'; // Default host code, should be moved to Config sheet ideally
+// The game's host PIN. For deployed environments, set this securely via Apps Script settings: 
+// Project Settings (gear icon) -> Script Properties -> Add property 'HOST_CODE'
+const HOST_CODE = PropertiesService.getScriptProperties().getProperty('HOST_CODE') || '123456'; 
+
 
 /**
  * Run this function once in the Apps Script editor to initialize all sheets.

@@ -1,4 +1,7 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbxLb0dF_CSTtDwFRV4RW90Yht--MSeeJX6xLeqHmTtI2rrF8lQUNseVi7Fcsb7G246lFg/exec';
+// The backend API URL. 
+// For cloning/templates: Set this via your hosting provider's environment variables.
+const API_URL = import.meta.env.VITE_API_URL || 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+
 
 export async function sync(playerId, token) {
   const url = `${API_URL}?action=sync&playerId=${playerId || ''}&token=${token || ''}`;
