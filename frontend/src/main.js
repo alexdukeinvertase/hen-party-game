@@ -36,10 +36,12 @@ function getOrCreateDeviceToken() {
 }
 
 async function init() {
-  if (window.location.pathname === '/admin') {
+  if (window.location.hash === '#admin' || window.location.hash === '#/admin') {
     admin.render();
     return;
   }
+  // Immediately show loading state while waiting for the first backend response
+  renderLoading();
   await poll(); // Initial sync
   startPolling();
   render();
@@ -52,8 +54,8 @@ function startPolling() {
 }
 
 async function poll() {
-  // Don't poll /admin route here, that's separate
-  if (window.location.pathname === '/admin') return;
+  // Don't poll on admin route
+  if (window.location.hash === '#admin' || window.location.hash === '#/admin') return;
 
   const data = await api.sync(state.playerId, state.deviceToken);
   
@@ -262,7 +264,7 @@ function renderVoting() {
   document.querySelector('#submitVote').onclick = async () => {
     const subBtn = document.querySelector('#submitVote');
     subBtn.disabled = true;
-    subBtn.textContent = 'Submitting...';
+    subBtn.innerHTML = '<div class="loader-dots inline-loader" style="margin: 0 auto; transform: scale(0.6); display: flex; justify-content: center; align-items: center; gap: 5px;"><span></span><span></span><span></span></div>';
 
     const res = await api.submitVote(state.playerId, state.deviceToken, currentQIndex + 1, selectedBachelor);
     
