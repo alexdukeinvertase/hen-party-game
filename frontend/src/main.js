@@ -280,4 +280,8 @@ function renderVoting() {
 }
 
 // --- Boot ---
+window.addEventListener('hashchange', () => {
+  window.location.reload();
+});
+
 init();
