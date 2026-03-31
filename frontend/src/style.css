@@ -103,15 +103,16 @@ label, .label-pill {
 
 #app {
   width: 100%;
-  max-width: 380px; /* Locked editorial width */
+  max-width: 380px;
   min-height: 100vh;
-  padding: var(--spacing-base);
+  padding: 40px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: center; /* Centered, but will allow overflow scroll */
   align-items: center;
   position: relative;
-  z-index: 10;
+  z-index: 100; /* Force above background */
+  pointer-events: auto;
 }
 
 .screen {
@@ -120,26 +121,19 @@ label, .label-pill {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  animation: entrance 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes entrance {
-  from { opacity: 0; transform: scale(0.98) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  opacity: 1;
 }
 
 .glass-card {
-  background-color: var(--surface-container-low);
-  border: 1px solid rgba(144, 146, 132, 0.15); /* outline-variant at 15% */
+  background-color: #242322; /* Lightened for clear contrast */
+  border: 1px solid rgba(255, 255, 255, 0.1); 
   border-radius: var(--radius-card);
   padding: 3rem 2rem;
   width: 100%;
-  box-shadow: 0 20px 40px rgba(14, 14, 14, 0.6);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
   text-align: center;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   position: relative;
-  z-index: 20; /* Keep card above image */
+  z-index: 101; 
 }
 
 button {
@@ -566,24 +560,10 @@ select {
 /* Floating Bachelorette Image */
 .bachelorette-image {
   position: fixed;
-  bottom: -20px; /* Slight bleed off bottom */
-  right: -20px;  /* Anchored to bottom right corner */
+  bottom: -20px;
+  right: -20px;
   width: 220px; 
-  z-index: 5; 
+  z-index: 1; /* Much lower z-index than content */
   pointer-events: none;
-  animation: slideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
-  opacity: 0;
-  transform: translateY(100px);
-}
-
-@keyframes slideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(100px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
