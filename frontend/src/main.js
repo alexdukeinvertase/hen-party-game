@@ -30,7 +30,16 @@ state.deviceToken = getOrCreateDeviceToken();
 window.onerror = (msg, url, line) => {
   const err = `CRASH: ${msg} at ${line}`;
   console.error(err);
-  if (app) app.innerHTML = `<div class="screen" style="border: 2px solid #ff4d4d; padding: 20px; background: rgba(255,0,0,0.1); color: #ff9999; font-family: monospace; font-size: 12px; white-space: pre-wrap;">${err}</div>`;
+  const errorDiv = document.querySelector('#app');
+  if (errorDiv) {
+    errorDiv.innerHTML = `
+      <div class="screen" style="border: 2px solid #ff4d4d; padding: 20px; background: rgba(0,0,0,0.1); color: #ff9999; font-family: monospace; font-size: 14px; white-space: pre-wrap;">
+        <h1 style="color:white">Something went wrong</h1>
+        <p>This is usually a pathing error or a script issue.</p>
+        <hr/>
+        ${err}
+      </div>`;
+  }
 };
 
 const app = document.querySelector('#app');
@@ -47,18 +56,15 @@ function getOrCreateDeviceToken() {
 }
 
 async function init() {
-  if (window.location.hash === '#admin' || window.location.hash === '#/admin') {
+  // Simple check for hash-based routing
+  const route = window.location.hash;
+  if (route === '#admin' || route === '#/admin') {
     admin.render();
-    return;
-  }
-
-  if (window.location.hash === '#design-system') {
-    renderDesignSystem();
     return;
   }
   
   renderLoading();
-  await poll(); // Initial sync
+  await poll(); // First sync
   startPolling();
   render();
 }
@@ -66,68 +72,73 @@ async function init() {
 function startPolling() {
   if (state.isPolling) return;
   state.isPolling = true;
-  setInterval(poll, 3000);
+  setInterval(poll, 4000); // 4 second intervals for stability
 }
 
 async function poll() {
-  if (window.location.hash === '#admin' || window.location.hash === '#/admin') return;
+  // Don't sync if we're in admin sub-view
+  if (window.location.hash.includes('admin')) return;
 
   try {
     const data = await api.sync(state.playerId, state.deviceToken);
     const oldState = state.gameState;
     
-    state.gameState = data.state;
+    // Safety check for unknown states
+    state.gameState = (data.state && ['JOINING', 'VOTING', 'RESULTS'].includes(data.state)) ? data.state : 'JOINING';
+    
     state.answeredCount = data.answeredCount || 0;
     if (data.results) state.results = data.results;
     if (data.allPlayers) state.allPlayers = data.allPlayers;
     
-    if (state.playerId && state.playerName && !data.playerName) {
-      console.log('Session reset on server. Clearing local session.');
-      state.playerId = null;
-      state.playerName = null;
-      localStorage.removeItem(LS_KEYS.PLAYER_ID);
-      localStorage.removeItem(LS_KEYS.PLAYER_NAME);
-      render();
-    } else if (data.playerName) {
-      state.playerName = data.playerName;
+    if (state.playerId && state.playerName && data.status === 'reset') {
+       state.playerId = null;
+       state.playerName = null;
+       localStorage.clear();
+       window.location.reload();
     }
 
     if (oldState !== state.gameState) {
       render();
     }
   } catch (e) {
-    console.error("Polling error", e);
+    console.error("Polling error:", e);
     state.errorHUD = e.toString();
     if (state.gameState === 'LOADING') {
       state.gameState = 'OFFLINE';
+      render();
     }
-    render();
   }
 }
 
 // --- Router & Rendering ---
 
 export function render() {
+  if (!app) return;
   app.innerHTML = '';
 
-  if (window.location.hash === '#design-system') {
-    renderDesignSystem();
-    return;
-  }
+  console.log('Rendering state:', state.gameState);
 
-  if (state.gameState === 'LOADING') renderLoading();
-  else if (state.gameState === 'OFFLINE') renderOffline();
-  else if (state.gameState === 'JOINING') {
-    if (!state.playerId) renderJoin();
-    else renderWaiting('Waiting for the host to start the game');
-  }
-  else if (state.gameState === 'VOTING') {
-    if (!state.playerId) renderJoin();
-    else if (state.answeredCount < 10) renderVoting();
-    else renderWaiting('All votes submitted. Waiting for results...');
-  }
-  else if (state.gameState === 'RESULTS') {
-    renderResults();
+  switch(state.gameState) {
+    case 'LOADING':
+      renderLoading();
+      break;
+    case 'OFFLINE':
+      renderOffline();
+      break;
+    case 'JOINING':
+      if (!state.playerId) renderJoin();
+      else renderWaiting('Waiting for the host to start the game');
+      break;
+    case 'VOTING':
+      if (!state.playerId) renderJoin();
+      else if (state.answeredCount < 10) renderVoting();
+      else renderWaiting('All votes submitted. Waiting for results...');
+      break;
+    case 'RESULTS':
+      renderResults();
+      break;
+    default:
+      renderJoin(); // Fallback to join screen
   }
 }
 
@@ -137,6 +148,7 @@ function renderLoading() {
       <div class="glass-card">
         <h1>The Bachelorette</h1>
         <div class="loader-dots"><span></span><span></span><span></span></div>
+        <p style="margin-top: 20px; font-size: 0.8rem; opacity: 0.5;">Loading your invitation...</p>
       </div>
     </div>
   `;
@@ -147,28 +159,11 @@ function renderOffline() {
     <div class="screen">
       <div class="glass-card">
         <h1>Offline</h1>
-        <p>Something went wrong with the connection.</p>
-        <div style="font-family: monospace; font-size: 12px; margin-top: 10px; color: #ff6666; word-break: break-all;">
-          ${state.errorHUD || 'Unknown sync failure'}
+        <p>We couldn't reach the server.</p>
+        <div style="font-family: monospace; font-size: 11px; margin-top: 15px; background: rgba(0,0,0,0.3); padding: 10px; color: #ff6666; word-break: break-all; border-radius: 8px;">
+          Error: ${state.errorHUD || 'Connection timed out'}
         </div>
-        <button onclick="location.reload()" style="margin-top: 20px;">Try Refreshing</button>
-      </div>
-    </div>
-  `;
-}
-
-// --- Design System Review Screen ---
-
-function renderDesignSystem() {
-  app.innerHTML = `
-    <div class="screen" style="padding: 64px 20px; max-height: none; overflow-y: auto;">
-      <div class="glass-card" style="text-align: left; padding-bottom: 64px;">
-        <h1>Midnight Sparkle Editorial</h1>
-        <p>A high-end editorial experience.</p>
-        <section style="margin-top: 48px;">
-           <div class="label-pill">Action Components</div>
-           <button>Primary Button</button>
-        </section>
+        <button onclick="location.reload()" style="margin-top: 20px;">Retry connection</button>
       </div>
     </div>
   `;
@@ -177,7 +172,7 @@ function renderDesignSystem() {
 // --- Screen Components ---
 
 async function renderJoin() {
-  const players = state.allPlayers && state.allPlayers.length > 0
+  const players = (state.allPlayers && state.allPlayers.length > 0)
     ? state.allPlayers 
     : ["Abbie G", "Parisa", "Alex", "Sue", "Carole", "Charlotte P", "Nicola K", "Char S", "Grace", "Ruby", "Beth", "Nicola B"];
 
@@ -186,12 +181,20 @@ async function renderJoin() {
       <div class="glass-card" style="position: relative; z-index: 600;">
         <h1>The Bachelorette</h1>
         <p>Choose your name to join the party.</p>
-        <div class="label-pill" style="margin-bottom: var(--spacing-sm); text-align: left;">Your identity</div>
-        <select id="nameSelect">
-          <option value="" disabled selected>Select from list...</option>
-          ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
-        </select>
+        
+        <div style="margin: 24px 0;">
+          <div class="label-pill" style="margin-bottom: 8px;">Select Guest</div>
+          <select id="nameSelect">
+            <option value="" disabled selected>Select from list...</option>
+            ${players.map(p => {
+               // Check if name is already 'claimed' (if we have that info)
+               return `<option value="${p}">${p}</option>`;
+            }).join('')}
+          </select>
+        </div>
+
         <button id="joinBtn" disabled style="margin-top: 20px;">Join game</button>
+        <p id="joinError" style="color: #ff9999; font-size: 0.8rem; margin-top: 12px; display: none;"></p>
       </div>
     </div>
     <img src="bachelorette.png" class="bachelorette-image" style="z-index: 500;">
@@ -199,6 +202,7 @@ async function renderJoin() {
 
   const select = document.querySelector('#nameSelect');
   const btn = document.querySelector('#joinBtn');
+  const err = document.querySelector('#joinError');
 
   select.onchange = () => {
     btn.disabled = !select.value;
@@ -207,8 +211,11 @@ async function renderJoin() {
   btn.onclick = async () => {
     const finalName = select.value;
     if (!finalName) return;
+    
     btn.disabled = true;
     btn.textContent = 'Joining...';
+    err.style.display = 'none';
+
     try {
       const res = await api.joinPlayer(finalName, state.deviceToken);
       if (res.status === 'SUCCESS') {
@@ -218,12 +225,14 @@ async function renderJoin() {
         localStorage.setItem(LS_KEYS.PLAYER_NAME, res.playerName);
         render();
       } else {
-        alert(res.message || 'Failed to join.');
+        err.textContent = res.message || 'This name is taken.';
+        err.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Join game';
       }
     } catch (e) {
-      alert('Network error. Try again.');
+      err.textContent = 'Connection error. Check your internet.';
+      err.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Join game';
     }
@@ -235,11 +244,12 @@ function renderWaiting(msg) {
     <div class="screen">
       <div class="glass-card">
         <h1>The Bachelorette</h1>
-        <p>${msg}</p>
-        <div style="margin-top: 24px;">
-          <div style="font-family: 'Newsreader', serif; font-size: 5rem; font-weight: 700; color: var(--primary); font-style: italic;">${state.answeredCount} / 10</div>
-          <div class="label-pill" style="margin-top: 8px;">QUESTIONS ANSWERED</div>
+        <p style="opacity: 0.8;">${msg}</p>
+        <div style="margin-top: 32px;">
+          <div style="font-family: 'Newsreader', serif; font-size: 5rem; font-weight: 700; color: var(--primary); font-style: italic; line-height: 1;">${state.answeredCount}</div>
+          <div class="label-pill" style="margin-top: 8px;">OF 10 VOTES PLACED</div>
         </div>
+        <div class="loader-dots" style="margin-top: 32px;"><span></span><span></span><span></span></div>
       </div>
     </div>
   `;
@@ -247,24 +257,27 @@ function renderWaiting(msg) {
 
 function renderResults() {
   app.innerHTML = `
-    <div class="screen" style="padding: 40px 10px;">
+    <div class="screen" style="padding: 40px 10px; max-height: none; overflow-y: auto; justify-content: flex-start;">
       <div class="glass-card">
-        <h1>The Results</h1>
+        <h1 style="font-size: 1.5rem;">Evening Gala Results</h1>
+        <p style="margin-bottom: 32px; opacity: 0.7;">The roses have been tallied.</p>
+        
         <div class="results-list">
           ${state.results.map((r, i) => `
             <div class="list-row ${i === 0 ? 'winner' : ''}">
-              <div class="row-label">${i + 1}. ${r.candidate}</div>
+              <div class="row-label">
+                <span class="rank" style="opacity: 0.5; font-size: 0.8rem; margin-right: 8px;">#${i + 1}</span>
+                ${r.candidate}
+              </div>
               <div class="row-value">${r.votes} votes</div>
             </div>
-          `).join('')}
+          `).join('') || '<p style="opacity: 0.4;">Waiting for tally...</p>'}
         </div>
+        
+        <button onclick="location.hash='#admin'" style="margin-top: 40px; padding: 12px;" class="ghost-btn">Host Dashboard</button>
       </div>
     </div>
   `;
-}
-
-function formatQuestionText(text) {
-  return text.replace(/"([^"]+)"/g, '<span class="italics-emphasis">“$1”</span>');
 }
 
 function renderVoting() {
@@ -283,20 +296,23 @@ function renderVoting() {
   ];
 
   const question = questions[currentQIndex];
-  const formattedQuestion = formatQuestionText(question);
   let selectedBachelor = null;
 
   app.innerHTML = `
-    <div class="screen" style="padding: 40px 0; justify-content: flex-start; align-items: flex-start;">
+    <div class="screen" style="padding: 40px 0; justify-content: flex-start; align-items: flex-start; max-height: none; overflow-y: auto;">
       <div class="question-header">
         <div class="label-pill">QUESTION ${currentQIndex + 1} OF 10</div>
-        <h2>${formattedQuestion}</h2>
+        <h2 style="font-family: 'Newsreader', serif; font-weight: 300; font-style: italic; font-size: 2.2rem; line-height: 1.2;">
+           ${question.replace(/"([^"]+)"/g, '<span style="color: var(--primary)">“$1”</span>')}
+        </h2>
       </div>
+      
       <div class="tile-grid">
-        ${state.bachelors.map((b, i) => `<div class="name-tile" data-name="${b}">${b}</div>`).join('')}
+        ${state.bachelors.map(b => `<div class="name-tile" data-name="${b}">${b}</div>`).join('')}
       </div>
-      <footer style="width: 100%; display: flex; justify-content: center; margin-top: 32px;">
-        <button id="submitVote" disabled style="width: auto; padding: 0 54px;">Submit Answer <span>&rarr;</span></button>
+      
+      <footer style="width: 100%; display: flex; justify-content: center; margin-top: 48px; padding-bottom: 48px;">
+        <button id="submitVote" disabled style="width: auto; padding: 0 54px; height: 64px;">Submit Vote <span>&rarr;</span></button>
       </footer>
     </div>
   `;
@@ -306,27 +322,36 @@ function renderVoting() {
       document.querySelectorAll('.name-tile').forEach(t => t.classList.remove('selected'));
       tile.classList.add('selected');
       selectedBachelor = tile.getAttribute('data-name');
-      const subBtn = document.querySelector('#submitVote');
-      subBtn.disabled = false;
+      document.querySelector('#submitVote').disabled = false;
     };
   });
 
   document.querySelector('#submitVote').onclick = async () => {
-    state.answeredCount++;
-    render();
+    const btn = document.querySelector('#submitVote');
+    btn.disabled = true;
+    btn.textContent = 'Casting...';
+
     try {
-      await api.submitVote(state.playerId, state.deviceToken, currentQIndex + 1, selectedBachelor);
+      const res = await api.submitVote(state.playerId, state.deviceToken, currentQIndex + 1, selectedBachelor);
+      if (res.status === 'SUCCESS') {
+        state.answeredCount++;
+        render();
+      } else {
+        alert(res.message);
+        btn.disabled = false;
+        btn.textContent = 'Submit Vote';
+      }
     } catch (e) {
-      state.answeredCount--;
-      render();
-      alert('Failed to submit vote.');
+      alert('Network error. Try again.');
+      btn.disabled = false;
+      btn.textContent = 'Submit Vote';
     }
   };
 }
 
 // --- App Start ---
 window.addEventListener('hashchange', () => {
-  window.location.reload();
+  init();
 });
 
 init();

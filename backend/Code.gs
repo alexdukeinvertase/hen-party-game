@@ -269,10 +269,15 @@ function clearSheetData(name, preserveNames) {
   SpreadsheetApp.flush();
 }
 
+let _settingsCache = null;
+
 function getSetting(key) {
-  const data = getOrCreateSheet('Config').getDataRange().getValues();
-  for (let i = 0; i < data.length; i++) if (data[i][0] === key) return data[i][1];
-  return null;
+  if (!_settingsCache) {
+    _settingsCache = {};
+    const data = getOrCreateSheet('Config').getDataRange().getValues();
+    data.forEach(r => _settingsCache[r[0]] = r[1]);
+  }
+  return _settingsCache[key] || null;
 }
 
 function setSetting(key, value) {
@@ -281,11 +286,13 @@ function setSetting(key, value) {
   for (let i = 0; i < data.length; i++) {
     if (data[i][0] === key) {
       sheet.getRange(i+1, 2).setValue(value);
+      _settingsCache = null;
       SpreadsheetApp.flush();
       return;
     }
   }
   sheet.appendRow([key, value]);
+  _settingsCache = null;
   SpreadsheetApp.flush();
 }
 
@@ -325,5 +332,6 @@ function setup() {
   getOrCreateSheet('Answers');
   getOrCreateSheet('Bachelors');
   getOrCreateSheet('Questions');
+  setSetting('GAME_STATE', 'JOINING');
   SpreadsheetApp.flush();
 }
