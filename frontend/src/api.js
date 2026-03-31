@@ -1,6 +1,6 @@
 // The backend API URL. 
 // For cloning/templates: Set this via your hosting provider's environment variables.
-const API_URL = import.meta.env.VITE_API_URL || 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+const API_URL = import.meta.env.VITE_API_URL || 'https://script.google.com/macros/s/AKfycbzpC0AsqW1oJKu4rJT3MaG6mgEBMBxsr67Dhc9UkCLfRS3g7xqL2suOM5iX-X54cw-g/exec';
 
 
 export async function sync(playerId, token) {
@@ -48,6 +48,7 @@ export async function submitVote(playerId, token, questionId, selection) {
 
 export async function adminControl(body) {
   try {
+    console.log('Sending Admin Control Body:', body);
     const resp = await fetch(API_URL, {
       method: 'POST',
       body: JSON.stringify({ action: 'adminControl', ...body })

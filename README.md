@@ -9,6 +9,8 @@ This repository is designed to be cloned and deployed for your own event!
 - **Micro-animations & Glassmorphism**: Premium UI feel tailored for mobile devices.
 - **Session Persistence**: Uses a `deviceToken` so players can refresh their browser without losing their spot.
 - **Admin Control Portal**: A `/admin` route for the host to control the game state and view progress.
+- **Dynamic Registration**: Players select their name from a list pre-populated in the Google Sheet. If a player joins, their session is tied to their name and device token.
+
 
 ## 🛠 Technology Stack
 This application consists of two decoupled components to maximize ease of deployment and avoid complex database setups for a one-off event.
@@ -30,7 +32,8 @@ This application consists of two decoupled components to maximize ease of deploy
    - Value: `YOUR_SECRET_PIN` (e.g., `HEN2026`)
    - Click Save.
 5. In the editor toolbar, select the `setup` function and click **Run**. This will create the necessary tabs in your Google Sheet. You will need to authorize the script.
-6. **Populate Data**: Fill out the `Players`, `Bachelors`, and `Questions` tabs in your Google Sheet.
+6. **Populate Data**: Fill out the `Bachelors` and `Questions` tabs. For `Players`, you can pre-populate the `Name` column (Column A) with your guests. Note that the system is designed to match these names exactly. If a name is not on the list, the backend will still allow them to join and append them to the sheet, but the frontend currently restricts selection to the names it finds in the sheet.
+
 7. **Deploy the API**: 
    - Click **Deploy > New deployment**.
    - Select type **Web app**.
@@ -56,3 +59,5 @@ Whenever you push to the `main` branch, the GitHub Action will automatically bui
 ## ⚠️ Limitations
 - **Polling Architecture**: The frontend asks the backend for updates every 3 seconds. Google Apps Script has API quotas, so this architecture is designed for a single party (~10-20 players), not hundreds of concurrent users.
 - **Security**: The "authentication" relies on a shared Admin PIN. It is not cryptographically secure and relies on the honor system among the party guests.
+- **Player Management**: If a player's name was removed from the sheet but they had already joined, their local session will be reset when the frontend syncs next, forcing them to re-join from the updated list.
+
