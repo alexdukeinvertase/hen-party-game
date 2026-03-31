@@ -1,6 +1,6 @@
 // The backend API URL. 
 // For cloning/templates: Set this via your hosting provider's environment variables.
-const API_URL = import.meta.env.VITE_API_URL || 'https://script.google.com/macros/s/AKfycbzpC0AsqW1oJKu4rJT3MaG6mgEBMBxsr67Dhc9UkCLfRS3g7xqL2suOM5iX-X54cw-g/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzpC0AsqW1oJKu4rJT3MaG6mgEBMBxsr67Dhc9UkCLfRS3g7xqL2suOM5iX-X54cw-g/exec';
 
 
 export async function sync(playerId, token) {
