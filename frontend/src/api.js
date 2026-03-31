@@ -4,18 +4,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://script.google.com/macro
 
 
 export async function sync(playerId, token) {
-  const url = `${API_URL}?action=sync&playerId=${playerId || ''}&token=${token || ''}`;
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      console.error('API error status:', resp.status);
-      const text = await resp.text();
-      console.error('API response body:', text);
-      return { state: 'OFFLINE' };
-    }
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'sync', playerId: playerId || '', token: token || '' })
+    });
+    if (!resp.ok) return { state: 'OFFLINE' };
     return await resp.json();
   } catch (err) {
-    console.error('Sync failed:', err);
     return { state: 'OFFLINE' };
   }
 }

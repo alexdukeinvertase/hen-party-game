@@ -40,6 +40,7 @@ function doPost(e) {
     debugLog('POST Action: ' + action);
 
     if (action === 'join') return handleJoin(body.name, body.deviceToken);
+    if (action === 'sync') return handleSync(body.playerId, body.token);
     if (action === 'vote') return handleVote(body.playerId, body.token, body.questionId, body.selection);
     if (action === 'adminControl') {
       return handleAdminControl(body.hostCode, body.newState, body.targetPlayer, body.adminAction);
