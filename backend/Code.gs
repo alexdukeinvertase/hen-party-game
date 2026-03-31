@@ -90,6 +90,14 @@ function handleAdminControl(hostCode, newState, targetPlayer, adminAction) {
       return jsonResponse({ status: 'error', message: 'Name not found: ' + targetPlayer });
     }
 
+    if (adminAction === 'NUCLEAR_RESET') {
+      clearSheetData('Players', false); // Delete everything
+      clearSheetData('Answers', false); 
+      setSetting('GAME_STATE', 'JOINING');
+      setup(); // Re-populate with defaults
+      return jsonResponse({ status: 'SUCCESS', message: 'Game fully reset to original state' });
+    }
+
     if (adminAction === 'fullReset') {
       clearSheetData('Players', true); // Preserve Column A names
       clearSheetData('Answers', false); 

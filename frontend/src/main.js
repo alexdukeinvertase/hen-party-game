@@ -88,6 +88,10 @@ async function poll() {
     }
   } catch (e) {
     console.error("Polling error", e);
+    if (state.gameState === 'LOADING') {
+      state.gameState = 'OFFLINE';
+      render();
+    }
   }
 }
 
