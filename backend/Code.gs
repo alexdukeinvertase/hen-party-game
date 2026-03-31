@@ -1,17 +1,7 @@
 /** 
  * Hens Game App — Finalized Backend (Google Apps Script)
- * Version: 22 (Cleaned & Logged)
+ * Version: 23 (Production Ready)
  */
-
-function manualTestRemove() {
-  // 1. Ensure someone named 'Alex' is joined in your sheet
-  // 2. Select this function in the toolbar above and click 'Run'
-  // 3. Check the sheet. Alex should be removed and a 🚀 log should appear.
-  const LOG_PIN = 'HEN2026';
-  const TARGET = 'Alex';
-  const RESULT = handleAdminControl(LOG_PIN, null, TARGET, 'resetName');
-  Logger.log(RESULT);
-}
 
 const HOST_CODE = 'HEN2026';
 const SPREADSHEET_ID = '12vAFai2szkg9C92Qt2XVa_UjG7rGcuo-L0DEjEmIsrs';
