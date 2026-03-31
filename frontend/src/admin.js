@@ -13,6 +13,7 @@ export async function render() {
 }
 
 function renderAuth() {
+  if (!app) return;
   app.innerHTML = `
     <div class="screen">
       <div class="glass-card">
@@ -31,6 +32,7 @@ function renderAuth() {
 }
 
 async function renderDashboard() {
+  if (!app) return;
   const data = await api.adminControl({ hostCode, adminAction: 'getAdminStatus' });
 
   if (data.status === 'error') {
@@ -42,7 +44,6 @@ async function renderDashboard() {
   }
 
   const s = data.state;
-
   const joinedCount = data.players.filter(p => p.joined).length;
   const finishedCount = data.players.filter(p => p.completed).length;
 
@@ -100,13 +101,13 @@ async function renderDashboard() {
             <div style="text-align: center; padding: 32px; border: 1px solid var(--primary); border-radius: 2rem;">
                <p style="font-weight: 900; font-size: 1.2rem; color: var(--primary);">GAME COMPLETE</p>
                <button id="startVoting" class="ghost-btn" style="margin-top: 16px;">Back to Voting</button>
+               <button id="startJoining" class="ghost-btn" style="margin-top: 12px;">Reset Lobby</button>
             </div>
           ` : ''}
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <h3 style="margin: 0; font-size: 1.1rem; opacity: 0.7;">Joined Guests</h3>
-          <button id="refreshBtn" class="ghost-btn" style="padding: 6px 16px; font-size: 0.7rem;">REFRESH</button>
         </div>
 
         <div class="player-roster">
@@ -118,17 +119,8 @@ async function renderDashboard() {
                   ● CONNECTED ${p.completed ? '• <span style="color: var(--secondary)">VOTED</span>' : ''}
                 </span>
               </div>
-              <div class="player-actions">
-                <button class="reset-btn" data-name="${p.name}" style="background: transparent; border-color: rgba(255, 0, 0, 0.2); font-size: 0.65rem; color: #ff9999; padding: 6px 16px;">REMOVE</button>
-              </div>
             </div>
           `).join('') || '<p style="opacity: 0.4; padding: 24px; text-align: center; font-size: 0.8rem;">No guests are currently connected.</p>'}
-        </div>
-
-        <div style="margin-top: 64px; padding-top: 32px; border-top: 1px dashed rgba(239, 240, 233, 0.1);">
-           <div class="label-pill" style="color: #ff5555; opacity: 0.8; margin-bottom: 12px;">Danger Zone</div>
-           <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 16px;">Irreversibly delete all player data and votes to start a fresh game.</p>
-           <button id="fullResetBtn" style="background: rgba(255, 0, 0, 0.15); border: 1px solid rgba(255, 0, 0, 0.3); color: #ff9999; font-size: 0.8rem; padding: 16px;">WIPE ALL DATA & RESET GAME</button>
         </div>
       </div>
     </div>
@@ -140,70 +132,9 @@ async function renderDashboard() {
     render();
   };
 
-  // Use optional chaining to avoid "null" errors when buttons are hidden in certain phases
   document.querySelector('#startJoining')?.addEventListener('click', () => updateState('JOINING', 'startJoining'));
   document.querySelector('#startVoting')?.addEventListener('click', () => updateState('VOTING', 'startVoting'));
   document.querySelector('#showResults')?.addEventListener('click', () => updateState('RESULTS', 'showResults'));
-  document.querySelector('#refreshBtn')?.addEventListener('click', () => render());
-
-  document.querySelector('#fullResetBtn')?.addEventListener('click', async () => {
-    if (!confirm('🚨 CAUTION 🚨\n\nThis will completely delete ALL players and ALL votes from the database.\n\nThis action cannot be undone. Are you absolutely sure?')) return;
-    
-    const btn = document.querySelector('#fullResetBtn');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'WIPING DATABASE...';
-    }
-    
-    try {
-      const res = await api.adminControl({ hostCode, adminAction: 'fullReset' });
-      if (res.status === 'SUCCESS') {
-        render();
-      } else {
-        alert('Failed to reset: ' + (res.message || 'Unknown error'));
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = 'WIPE ALL DATA & RESET GAME';
-        }
-      }
-    } catch (e) {
-      alert('Network error during reset.');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'WIPE ALL DATA & RESET GAME';
-      }
-    }
-  });
-
-  document.querySelectorAll('.reset-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const name = btn.getAttribute('data-name');
-      if (!name) return;
-
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = '...';
-      
-      try {
-        console.log(`Attempting to remove player: ${name}`);
-        const res = await api.adminControl({ hostCode, adminAction: 'resetName', targetPlayer: name });
-        console.log('Remove response:', res);
-
-        if (res.status === 'SUCCESS') {
-          await render();
-        } else {
-          btn.disabled = false;
-          btn.textContent = originalText;
-          alert('Failed to remove: ' + (res.message || 'Unknown error'));
-        }
-      } catch (err) {
-        console.error('Remove Error:', err);
-        btn.disabled = false;
-        btn.textContent = originalText;
-        alert('Network error. Check your connection or host PIN.');
-      }
-    };
-  });
 }
 
 async function updateState(newState, btnId) {
@@ -214,21 +145,17 @@ async function updateState(newState, btnId) {
   btn.innerHTML = '<div class="loader-dots inline-loader"><span></span><span></span><span></span></div>';
 
   try {
-    console.log(`Setting Game State to: ${newState}`);
     const res = await api.adminControl({ hostCode, newState });
-    console.log('Server response:', res);
-    
     if (res.status === 'SUCCESS') {
-      await render(); // Refresh full dashboard
+      await render(); 
     } else {
       btn.disabled = false;
       btn.innerHTML = originalContent;
-      alert('Action failed: ' + (res.message || 'Unknown error. Check Google Sheet for logic errors.'));
+      alert('Action failed: ' + (res.message || 'Unknown error.'));
     }
   } catch (e) {
-    console.error('State Update Error:', e);
     btn.disabled = false;
     btn.innerHTML = originalContent;
-    alert('Network error. Google Apps Script might be throttled or disconnected.');
+    alert('Network error.');
   }
 }

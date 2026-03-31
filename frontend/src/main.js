@@ -14,12 +14,23 @@ const state = {
   gameState: 'LOADING', // LOADING, JOINING, VOTING, RESULTS, OFFLINE
   playerId: localStorage.getItem(LS_KEYS.PLAYER_ID),
   playerName: localStorage.getItem(LS_KEYS.PLAYER_NAME),
-  deviceToken: getOrCreateDeviceToken(),
+  deviceToken: '', // populated in getOrCreateDeviceToken
   answeredCount: 0,
   results: [],
   allPlayers: [],
   bachelors: ["Alfie", "Ben", "Theo", "Max", "Harry", "Tom", "Jack", "Ollie", "James", "Sam", "Ryan", "Chris", "Dom", "Luca"],
-  isPolling: false
+  isPolling: false,
+  errorHUD: null
+};
+
+// --- Early Population ---
+state.deviceToken = getOrCreateDeviceToken();
+
+// Global Error Catcher
+window.onerror = (msg, url, line) => {
+  const err = `CRASH: ${msg} at ${line}`;
+  console.error(err);
+  if (app) app.innerHTML = `<div class="screen" style="border: 2px solid #ff4d4d; padding: 20px; background: rgba(255,0,0,0.1); color: #ff9999; font-family: monospace; font-size: 12px; white-space: pre-wrap;">${err}</div>`;
 };
 
 const app = document.querySelector('#app');
@@ -70,8 +81,6 @@ async function poll() {
     if (data.results) state.results = data.results;
     if (data.allPlayers) state.allPlayers = data.allPlayers;
     
-    // Auto-fix for server resets: 
-    // If server no longer recognizes our ID, clear local cache and re-render
     if (state.playerId && state.playerName && !data.playerName) {
       console.log('Session reset on server. Clearing local session.');
       state.playerId = null;
@@ -88,10 +97,11 @@ async function poll() {
     }
   } catch (e) {
     console.error("Polling error", e);
+    state.errorHUD = e.toString();
     if (state.gameState === 'LOADING') {
       state.gameState = 'OFFLINE';
-      render();
     }
+    render();
   }
 }
 
@@ -138,6 +148,9 @@ function renderOffline() {
       <div class="glass-card">
         <h1>Offline</h1>
         <p>Something went wrong with the connection.</p>
+        <div style="font-family: monospace; font-size: 12px; margin-top: 10px; color: #ff6666; word-break: break-all;">
+          ${state.errorHUD || 'Unknown sync failure'}
+        </div>
         <button onclick="location.reload()" style="margin-top: 20px;">Try Refreshing</button>
       </div>
     </div>
@@ -150,82 +163,12 @@ function renderDesignSystem() {
   app.innerHTML = `
     <div class="screen" style="padding: 64px 20px; max-height: none; overflow-y: auto;">
       <div class="glass-card" style="text-align: left; padding-bottom: 64px;">
-        <div class="label-pill" style="margin-bottom: 8px;">Design System</div>
         <h1>Midnight Sparkle Editorial</h1>
-        <p>A high-end editorial experience featuring Newsreader and Manrope.</p>
-
+        <p>A high-end editorial experience.</p>
         <section style="margin-top: 48px;">
-          <div class="label-pill">Gala Question Preview</div>
-          <div class="question-header" style="margin-bottom: 24px;">
-            <div class="label-pill">Question 1 of 10</div>
-            <h2>Who is most likely to say they are looking for a <span class="italics-emphasis">“high-value woman”</span>?</h2>
-          </div>
-          <div class="tile-grid">
-            <div class="name-tile selected">Alfie</div>
-            <div class="name-tile">Ben</div>
-            <div class="name-tile">Theo</div>
-            <div class="name-tile">Max</div>
-            <div class="name-tile">Luca</div>
-          </div>
+           <div class="label-pill">Action Components</div>
+           <button>Primary Button</button>
         </section>
-        
-        <section style="margin-top: 48px;">
-          <div class="label-pill">Typography</div>
-          <h1>Header 1 Italic</h1>
-          <h2>Header 2 Regular</h2>
-          <h3>Header 3 Regular</h3>
-          <p>This is a paragraph using Manrope. It should feel airy and clean with high legibility. The line height is set to 1.6.</p>
-        </section>
-
-        <section style="margin-top: 48px;">
-          <div class="label-pill">Action Components</div>
-          <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
-            <button>Primary Button Gradient</button>
-            <button disabled>Disabled State</button>
-            <div style="display: flex; gap: 8px;">
-              <button class="ghost-btn">Secondary Ghost</button>
-              <button class="reset-btn">Reset Style</button>
-            </div>
-          </div>
-        </section>
-
-        <section style="margin-top: 48px;">
-          <div class="label-pill">Form Elements</div>
-          <div style="margin-top: 16px;">
-            <label>Name Selection</label>
-            <select>
-              <option>Sample Selected Input</option>
-              <option>Option 2</option>
-            </select>
-            <label>Text Input</label>
-            <input type="text" placeholder="Type something expensive...">
-          </div>
-        </section>
-
-        <section style="margin-top: 48px;">
-          <div class="label-pill">Selection Tiles</div>
-          <div class="tile-grid" style="margin-top: 16px;">
-            <div class="name-tile">Bachelor A</div>
-            <div class="name-tile selected">Selected Tile</div>
-            <div class="name-tile">Bachelor C</div>
-          </div>
-        </section>
-
-        <section style="margin-top: 48px;">
-          <div class="label-pill">Results Rows</div>
-          <div class="results-list" style="margin-top: 16px;">
-            <div class="list-row winner">
-              <div class="row-label">1. Sample Winner</div>
-              <div class="row-value">24 votes</div>
-            </div>
-            <div class="list-row">
-              <div class="row-label">2. Runner Up</div>
-              <div class="row-value">12 votes</div>
-            </div>
-          </div>
-        </section>
-        
-        <p style="margin-top: 48px; font-size: 0.8rem; opacity: 0.5;">End of Design Review.</p>
       </div>
     </div>
   `;
@@ -240,21 +183,18 @@ async function renderJoin() {
 
   app.innerHTML = `
     <div class="screen">
-      <div class="glass-card">
+      <div class="glass-card" style="position: relative; z-index: 600;">
         <h1>The Bachelorette</h1>
         <p>Choose your name to join the party.</p>
-        
         <div class="label-pill" style="margin-bottom: var(--spacing-sm); text-align: left;">Your identity</div>
         <select id="nameSelect">
           <option value="" disabled selected>Select from list...</option>
           ${players.map(p => `<option value="${p}">${p}</option>`).join('')}
         </select>
-        
         <button id="joinBtn" disabled style="margin-top: 20px;">Join game</button>
-        <p style="margin-top: 24px; font-size: 0.8rem; color: var(--text-muted);">Persistence is stored locally on this device.</p>
       </div>
     </div>
-    <img src="/hen-party-game/bachelorette.png" class="bachelorette-image">
+    <img src="/hen-party-game/bachelorette.png" class="bachelorette-image" style="z-index: 500;">
   `;
 
   const select = document.querySelector('#nameSelect');
@@ -267,10 +207,8 @@ async function renderJoin() {
   btn.onclick = async () => {
     const finalName = select.value;
     if (!finalName) return;
-
     btn.disabled = true;
     btn.textContent = 'Joining...';
-
     try {
       const res = await api.joinPlayer(finalName, state.deviceToken);
       if (res.status === 'SUCCESS') {
@@ -309,28 +247,23 @@ function renderWaiting(msg) {
 
 function renderResults() {
   app.innerHTML = `
-    <div class="screen" style="padding: 40px 0;">
+    <div class="screen" style="padding: 40px 10px;">
       <div class="glass-card">
         <h1>The Results</h1>
-        <p style="margin-bottom: 30px; opacity: 0.7;">Who is husband material?</p>
-        
         <div class="results-list">
           ${state.results.map((r, i) => `
             <div class="list-row ${i === 0 ? 'winner' : ''}">
-              <div class="row-label">${i + 1}. ${r.name}</div>
+              <div class="row-label">${i + 1}. ${r.candidate}</div>
               <div class="row-value">${r.votes} votes</div>
             </div>
           `).join('')}
         </div>
-
-        <p style="margin-top: 30px; font-style: italic; font-size: 0.9rem;">Thanks for playing!</p>
       </div>
     </div>
   `;
 }
 
 function formatQuestionText(text) {
-  // Wrap words in quotes with editorial italics-emphasis span
   return text.replace(/"([^"]+)"/g, '<span class="italics-emphasis">“$1”</span>');
 }
 
@@ -359,13 +292,9 @@ function renderVoting() {
         <div class="label-pill">QUESTION ${currentQIndex + 1} OF 10</div>
         <h2>${formattedQuestion}</h2>
       </div>
-      
       <div class="tile-grid">
-        ${state.bachelors.map((b, i) => {
-          return `<div class="name-tile" data-name="${b}">${b}</div>`;
-        }).join('')}
+        ${state.bachelors.map((b, i) => `<div class="name-tile" data-name="${b}">${b}</div>`).join('')}
       </div>
-      
       <footer style="width: 100%; display: flex; justify-content: center; margin-top: 32px;">
         <button id="submitVote" disabled style="width: auto; padding: 0 54px;">Submit Answer <span>&rarr;</span></button>
       </footer>
@@ -377,32 +306,20 @@ function renderVoting() {
       document.querySelectorAll('.name-tile').forEach(t => t.classList.remove('selected'));
       tile.classList.add('selected');
       selectedBachelor = tile.getAttribute('data-name');
-
       const subBtn = document.querySelector('#submitVote');
       subBtn.disabled = false;
-      subBtn.innerHTML = 'Submit Answer <span>&rarr;</span>';
     };
   });
 
   document.querySelector('#submitVote').onclick = async () => {
-    // Optimistic Update: Move to next question immediately
     state.answeredCount++;
     render();
-
-    // Background Request: Send the vote
     try {
-      const res = await api.submitVote(state.playerId, state.deviceToken, currentQIndex + 1, selectedBachelor);
-      
-      if (res.status !== 'SUCCESS') {
-        // Rollback on failure
-        state.answeredCount--;
-        render();
-        alert('Failed to submit vote. Please try again.');
-      }
+      await api.submitVote(state.playerId, state.deviceToken, currentQIndex + 1, selectedBachelor);
     } catch (e) {
       state.answeredCount--;
       render();
-      alert('Network error. Your vote was not saved.');
+      alert('Failed to submit vote.');
     }
   };
 }
