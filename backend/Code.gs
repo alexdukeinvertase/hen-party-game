@@ -4,7 +4,7 @@
  */
 
 const HOST_CODE = 'HEN2026';
-const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+const SPREADSHEET_ID = '12vAFai2szkg9C92Qt2XVa_UjG7rGcuo-L0DEjEmIsrs';
 
 // --- Entry Points ---
 

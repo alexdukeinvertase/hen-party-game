@@ -20,7 +20,8 @@ const state = {
   allPlayers: [],
   bachelors: ["Alfie", "Ben", "Theo", "Max", "Harry", "Tom", "Jack", "Ollie", "James", "Sam", "Ryan", "Chris", "Dom", "Luca"],
   isPolling: false,
-  errorHUD: null
+  errorHUD: null,
+  version: '2.8.2'
 };
 
 // --- Early Population ---
@@ -174,7 +175,9 @@ function renderOffline() {
 async function renderJoin() {
   const players = (state.allPlayers && state.allPlayers.length > 0)
     ? state.allPlayers 
-    : ["Abbie G", "Parisa", "Alex", "Sue", "Carole", "Charlotte P", "Nicola K", "Char S", "Grace", "Ruby", "Beth", "Nicola B"];
+    : [];
+
+  const syncStatus = (state.allPlayers && state.allPlayers.length > 0) ? '' : '<p style="color:#ff6666; font-size:10px; margin-top:20px;">🚨 Backend sync pending... check your sheet ID</p>';
 
   app.innerHTML = `
     <div class="screen">
@@ -195,6 +198,8 @@ async function renderJoin() {
 
         <button id="joinBtn" disabled style="margin-top: 20px;">Join game</button>
         <p id="joinError" style="color: #ff9999; font-size: 0.8rem; margin-top: 12px; display: none;"></p>
+        ${syncStatus}
+        <div style="font-size:8px; opacity:0.3; margin-top:20px; text-align:center;">V${state.version}</div>
       </div>
     </div>
     <img src="bachelorette.png" class="bachelorette-image" style="z-index: 500;">
