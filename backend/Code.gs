@@ -4,7 +4,7 @@
  */
 
 const HOST_CODE = 'HEN2026';
-const SPREADSHEET_ID = '12vAFai2szkg9C92Qt2XVa_UjG7rGcuo-L0DEjEmIsrs';
+const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 
 // --- Entry Points ---
 
@@ -321,23 +321,9 @@ function jsonResponse(obj) {
 
 function setup() {
   getOrCreateSheet('Config');
-  const playerSheet = getOrCreateSheet('Players');
+  getOrCreateSheet('Players');
   getOrCreateSheet('Answers');
   getOrCreateSheet('Bachelors');
   getOrCreateSheet('Questions');
-
-  // Pre-populate players if empty
-  if (playerSheet.getLastRow() < 2) {
-    const players = [
-      ["Abbie G"], ["Parisa"], ["Alex"], ["Sue"], ["Carole"], ["Charlotte P"],
-      ["Nicola K"], ["Char S"], ["Grace"], ["Ruby"], ["Beth"], ["Nicola B"]
-    ];
-    playerSheet.getRange(1, 1).setValue("Name");
-    playerSheet.getRange(1, 2).setValue("ID");
-    playerSheet.getRange(1, 3).setValue("Token");
-    playerSheet.getRange(1, 4).setValue("JoinedAt");
-    playerSheet.getRange(1, 5).setValue("CompletedAt");
-    playerSheet.getRange(2, 1, players.length, 1).setValues(players);
-    SpreadsheetApp.flush();
-  }
+  SpreadsheetApp.flush();
 }
