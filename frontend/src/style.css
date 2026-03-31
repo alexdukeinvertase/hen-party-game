@@ -550,20 +550,20 @@ select {
   h1 { font-size: 2.5rem; }
   .admin-btn { min-width: 100%; }
   .bachelorette-image {
-    width: 140px; 
-    right: -10px;
-    bottom: -10px;
-    opacity: 0.8;
+    width: 80px; /* Much smaller on mobile */
+    right: 5px;
+    bottom: 10px;
   }
 }
 
 /* Floating Bachelorette Image */
 .bachelorette-image {
   position: fixed;
-  bottom: -20px;
-  right: -20px;
-  width: 220px; 
-  z-index: 1; /* Much lower z-index than content */
+  bottom: 15px; /* Offset from bottom */
+  right: 10px;  /* Anchored to right */
+  width: 120px; /* Smaller as requested */
+  z-index: 500; /* Force IN FRONT of the card */
   pointer-events: none;
   filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
+  opacity: 1;
 }
