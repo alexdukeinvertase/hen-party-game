@@ -194,7 +194,7 @@ async function renderJoin() {
         <button id="joinBtn" disabled style="margin-top: 20px;">Join game</button>
       </div>
     </div>
-    <img src="/hen-party-game/bachelorette.png" class="bachelorette-image" style="z-index: 500;">
+    <img src="bachelorette.png" class="bachelorette-image" style="z-index: 500;">
   `;
 
   const select = document.querySelector('#nameSelect');
