@@ -331,7 +331,7 @@ function renderVoting() {
   let selectedBachelor = null;
 
   app.innerHTML = `
-    <div class="screen" style="padding: 24px 0; justify-content: flex-start; max-height: none; overflow-y: auto; width: 100%;">
+    <div class="screen" style="padding: 24px 16px; box-sizing: border-box; justify-content: flex-start; max-height: none; width: 100%;">
       <div class="question-header">
         <div class="label-pill">QUESTION ${currentQIndex + 1} OF ${questionsList.length}</div>
         <h2 style="font-family: 'Newsreader', serif; font-weight: 300; font-style: italic; font-size: 2.2rem; line-height: 1.2;">
