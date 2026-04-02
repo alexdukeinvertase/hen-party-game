@@ -36,9 +36,11 @@ async function renderDashboard() {
   const data = await api.adminControl({ hostCode, adminAction: 'getAdminStatus' });
 
   if (data.status === 'error') {
-    alert('Invalid host code');
-    localStorage.removeItem('hens_host_code');
-    hostCode = '';
+    alert('Admin Error: ' + (data.message || 'Unknown error'));
+    if (data.message === 'Invalid host code') {
+      localStorage.removeItem('hens_host_code');
+      hostCode = '';
+    }
     render();
     return;
   }
