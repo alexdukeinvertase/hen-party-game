@@ -120,31 +120,41 @@ async function poll() {
 
 export function render() {
   if (!app) return;
-  app.innerHTML = '';
 
   console.log('Rendering state:', state.gameState);
 
-  switch(state.gameState) {
-    case 'LOADING':
-      renderLoading();
-      break;
-    case 'OFFLINE':
-      renderOffline();
-      break;
-    case 'JOINING':
-      if (!state.playerId) renderJoin();
-      else renderWaiting('Waiting for the host to start the game');
-      break;
-    case 'VOTING':
-      if (!state.playerId) renderJoin();
-      else if (state.answeredCount < 10) renderVoting();
-      else renderWaiting('All votes submitted. Waiting for results...');
-      break;
-    case 'RESULTS':
-      renderResults();
-      break;
-    default:
-      renderJoin(); // Fallback to join screen
+  try {
+    app.innerHTML = '';
+    switch(state.gameState) {
+      case 'LOADING':
+        renderLoading();
+        break;
+      case 'OFFLINE':
+        renderOffline();
+        break;
+      case 'JOINING':
+        if (!state.playerId) renderJoin();
+        else renderWaiting('Waiting for the host to start the game');
+        break;
+      case 'VOTING':
+        if (!state.playerId) renderJoin();
+        else if (state.answeredCount < 10) renderVoting();
+        else renderWaiting('All votes submitted. Waiting for results...');
+        break;
+      case 'RESULTS':
+        renderResults();
+        break;
+      default:
+        renderJoin();
+    }
+  } catch (err) {
+    console.error("Render error:", err);
+    app.innerHTML = `
+      <div class="screen" style="padding: 20px; color: #ff9999;">
+        <h1>Render Crash</h1>
+        <p>${err.toString()}</p>
+        <button onclick="localStorage.clear(); location.reload();">Reset App</button>
+      </div>`;
   }
 }
 
@@ -324,7 +334,7 @@ function renderVoting() {
       <div class="question-header">
         <div class="label-pill">QUESTION ${currentQIndex + 1} OF 10</div>
         <h2 style="font-family: 'Newsreader', serif; font-weight: 300; font-style: italic; font-size: 2.2rem; line-height: 1.2;">
-           ${question.replace(/"([^"]+)"/g, '<span style="color: var(--primary)">“$1”</span>')}
+           ${String(question).replace(/"([^"]+)"/g, '<span style="color: var(--primary)">“$1”</span>')}
         </h2>
       </div>
       
