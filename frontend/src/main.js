@@ -344,7 +344,7 @@ function renderVoting() {
       </div>
       
       <footer style="width: 100%; display: flex; justify-content: center; margin-top: 24px; padding-bottom: 24px;">
-        <button id="submitVote" disabled style="width: auto; padding: 0 54px; height: 64px;">Submit Vote <span>&rarr;</span></button>
+        <button id="submitVote" disabled style="width: auto; padding: 0 40px; height: 50px; font-size: 0.8rem;">Submit Vote <span>&rarr;</span></button>
       </footer>
     </div>
   `;
