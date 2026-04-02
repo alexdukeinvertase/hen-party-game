@@ -1,6 +1,6 @@
 /** 
- * Hens Game App — Finalized Backend (Google Apps Script)
- * Version: 23 (Production Ready)
+ * Hens Game App — Version 29 (Production + Auto-Detect)
+ * ID: 12vAFai2szkg9C92Qt2XVa_UjG7rGcuo-L0DEjEmIsrs
  */
 
 const HOST_CODE = 'HEN2026';
@@ -9,25 +9,14 @@ const SPREADSHEET_ID = '12vAFai2szkg9C92Qt2XVa_UjG7rGcuo-L0DEjEmIsrs';
 // --- Entry Points ---
 
 function doGet(e) {
-  const action = e.parameter.action;
-  debugLog('GET Action: ' + action);
-
-  if (action === 'PING') return jsonResponse({ status: 'PONG' });
-  if (action === 'sync') return handleSync(e.parameter.playerId, e.parameter.token);
-  
-  return jsonResponse({ status: 'error', message: 'Unknown GET action: ' + action });
+  if (e.parameter.action === 'PING') return jsonResponse({ status: 'PONG' });
+  return handleSync(e.parameter.playerId, e.parameter.token);
 }
 
 function doPost(e) {
   try {
-    if (!e || !e.postData || !e.postData.contents) {
-      debugLog('ERROR: Empty POST body');
-      return jsonResponse({ status: 'error', message: 'No body received' });
-    }
-    
     const body = JSON.parse(e.postData.contents);
     const action = body.action;
-    debugLog('POST Action: ' + action);
 
     if (action === 'join') return handleJoin(body.name, body.deviceToken);
     if (action === 'sync') return handleSync(body.playerId, body.token);
@@ -35,10 +24,67 @@ function doPost(e) {
     if (action === 'adminControl') {
       return handleAdminControl(body.hostCode, body.newState, body.targetPlayer, body.adminAction);
     }
-
+    
     return jsonResponse({ status: 'error', message: 'Unknown POST action: ' + action });
   } catch (err) {
-    debugLog('FATAL: ' + err.toString());
+    return jsonResponse({ status: 'error', message: err.toString() });
+  }
+}
+
+// --- Player Handlers ---
+
+function handleJoin(name, deviceToken) {
+  const sheet = findBestSheet('Players');
+  const data = sheet.getDataRange().getValues();
+  const target = String(name || '').trim().toLowerCase();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toLowerCase() === target) {
+      const playerId = data[i][1] || Utilities.getUuid();
+      sheet.getRange(i + 1, 2).setValue(playerId); 
+      sheet.getRange(i + 1, 3).setValue(deviceToken); 
+      sheet.getRange(i + 1, 4).setValue(new Date()); 
+      SpreadsheetApp.flush();
+      return jsonResponse({ status: 'SUCCESS', playerId, playerName: name });
+    }
+  }
+  return jsonResponse({ status: 'error', message: 'Name not found in sheet row 2 onwards.' });
+}
+
+function handleSync(playerId, token) {
+  const sheet = findBestSheet('Players');
+  const data = sheet.getDataRange().getValues();
+  const state = getSetting('GAME_STATE') || 'JOINING';
+  const response = { state: state };
+  
+  if (playerId && token) {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]) === String(playerId)) {
+        response.playerName = data[i][0];
+        response.answeredCount = getAnsweredCount(playerId);
+      }
+    }
+  }
+  
+  if (state === 'RESULTS') response.results = calculateResults();
+  
+  response.allPlayers = data.slice(1).map(row => row[0]).filter(Boolean);
+  
+  response.debug = {
+    sheetFound: sheet.getName(),
+    playerCount: response.allPlayers.length,
+    targetId: SPREADSHEET_ID.substring(0, 5) + "..."
+  };
+  
+  return jsonResponse(response);
+}
+
+function handleVote(playerId, token, questionId, selection) {
+  try {
+    const sheet = getOrCreateSheet('Answers');
+    sheet.appendRow([playerId, String(questionId), selection, new Date()]);
+    return jsonResponse({ status: 'SUCCESS' });
+  } catch (err) {
     return jsonResponse({ status: 'error', message: err.toString() });
   }
 }
@@ -46,10 +92,7 @@ function doPost(e) {
 // --- Admin Handlers ---
 
 function handleAdminControl(hostCode, newState, targetPlayer, adminAction) {
-  debugLog('Auth for ' + adminAction + ' with ' + hostCode);
-  
   if (hostCode !== HOST_CODE) {
-    debugLog('AUTH FAILED: ' + hostCode + ' !== ' + HOST_CODE);
     return jsonResponse({ status: 'error', message: 'Invalid host code' });
   }
 
@@ -57,43 +100,6 @@ function handleAdminControl(hostCode, newState, targetPlayer, adminAction) {
     if (newState) {
       setSetting('GAME_STATE', newState);
       return jsonResponse({ status: 'SUCCESS', state: newState });
-    }
-
-    if (adminAction === 'resetName' && targetPlayer) {
-      const sheet = getOrCreateSheet('Players');
-      const data = sheet.getDataRange().getValues();
-      const clean = (s) => String(s || '').replace(/\s/g, '').toLowerCase();
-      const target = clean(targetPlayer);
-
-      for (let i = 1; i < data.length; i++) {
-        if (clean(data[i][0]) === target) {
-          const original = data[i][0];
-          const maxCols = sheet.getMaxColumns();
-          const clearCols = Math.min(4, maxCols > 1 ? maxCols - 1 : 0);
-          if (clearCols > 0) {
-            sheet.getRange(i + 1, 2, 1, clearCols).clearContent();
-          }
-          SpreadsheetApp.flush();
-          debugLog('RESET SUCCESS: ' + original);
-          return jsonResponse({ status: 'SUCCESS', message: 'Restored ' + original });
-        }
-      }
-      return jsonResponse({ status: 'error', message: 'Name not found: ' + targetPlayer });
-    }
-
-    if (adminAction === 'NUCLEAR_RESET') {
-      clearSheetData('Players', false); // Delete everything
-      clearSheetData('Answers', false); 
-      setSetting('GAME_STATE', 'JOINING');
-      setup(); // Re-populate with defaults
-      return jsonResponse({ status: 'SUCCESS', message: 'Game fully reset to original state' });
-    }
-
-    if (adminAction === 'fullReset') {
-      clearSheetData('Players', true); // Preserve Column A names
-      clearSheetData('Answers', false); 
-      setSetting('GAME_STATE', 'JOINING');
-      return jsonResponse({ status: 'SUCCESS', message: 'Game fully reset' });
     }
 
     if (adminAction === 'getAdminStatus') {
@@ -105,113 +111,12 @@ function handleAdminControl(hostCode, newState, targetPlayer, adminAction) {
 
     return jsonResponse({ status: 'error', message: 'Unknown admin action: ' + adminAction });
   } catch (err) {
-    debugLog('ADMIN ERR: ' + err.toString());
     return jsonResponse({ status: 'error', message: err.toString() });
   }
 }
 
-// --- Player Handlers ---
-
-function handleSync(playerId, token) {
-  const state = getSetting('GAME_STATE') || 'JOINING';
-  const response = { state: state };
-
-  if (playerId && token) {
-    const player = getPlayer(playerId);
-    debugLog('Sync for ' + playerId + ' (' + (player ? player.name : 'NOT FOUND') + ') with token ' + token);
-    if (player && player.deviceToken === token) {
-      response.playerName = player.name;
-      response.answeredCount = getAnsweredCount(playerId);
-    } else if (player) {
-      debugLog('Token mismatch: ' + player.deviceToken + ' !== ' + token);
-    }
-  }
-
-  if (state === 'RESULTS') response.results = calculateResults();
-  
-  // Always send the list of registered names for the joining screen
-  response.allPlayers = getRegisteredNames();
-  
-  return jsonResponse(response);
-}
-
-function getRegisteredNames() {
-  try {
-    const sheet = getOrCreateSheet('Players');
-    const data = sheet.getDataRange().getValues();
-    if (data.length < 2) return [];
-    return data.slice(1).map(row => row[0]).filter(Boolean);
-  } catch (e) {
-    return [];
-  }
-}
-
-function handleJoin(name, deviceToken) {
-  const sheet = getOrCreateSheet('Players');
-  const data = sheet.getDataRange().getValues();
-  const clean = (s) => String(s || '').trim().toLowerCase();
-  const target = clean(name);
-  
-  for (let i = 1; i < data.length; i++) {
-    if (clean(data[i][0]) === target) {
-      if (!data[i][2]) { // Column C is index 2
-        const playerId = Utilities.getUuid();
-        sheet.getRange(i + 1, 2).setValue(playerId); // Column B
-        sheet.getRange(i + 1, 3).setValue(deviceToken); // Column C
-        sheet.getRange(i + 1, 4).setValue(new Date()); // Column D
-        SpreadsheetApp.flush();
-        return jsonResponse({ status: 'SUCCESS', playerId, playerName: name });
-      } else if (data[i][2] === deviceToken) {
-        return jsonResponse({ status: 'SUCCESS', playerId: data[i][1], playerName: name });
-      } else {
-        return jsonResponse({ status: 'error', message: 'Name already claimed' });
-      }
-    }
-  }
-  
-  // If name not found, append a new row for them
-  const playerId = Utilities.getUuid();
-  sheet.appendRow([name, playerId, deviceToken, new Date(), ""]);
-  SpreadsheetApp.flush();
-  return jsonResponse({ status: 'SUCCESS', playerId, playerName: name });
-}
-
-function handleVote(playerId, token, questionId, selection) {
-  // 1. Fast path: Minimal session check
-  const player = getPlayer(playerId);
-  if (!player || player.deviceToken !== token) return jsonResponse({ status: 'error', message: 'Invalid session' });
-
-  // 2. Append answer (Fastest way to write)
-  const sheet = getOrCreateSheet('Answers');
-  sheet.appendRow([playerId, String(questionId), selection, new Date()]);
-
-  // 3. Return immediately. We don't need to check for completion here
-  // as the frontend will sync later anyway.
-  return jsonResponse({ status: 'SUCCESS' });
-}
-
-// --- Logic & Database Helpers ---
-
-function calculateResults() {
-  const answers = getOrCreateSheet('Answers').getDataRange().getValues();
-  const players = getOrCreateSheet('Players').getDataRange().getValues();
-  const playerMap = {};
-  players.slice(1).forEach(r => playerMap[r[1]] = r[0]);
-
-  const scores = {};
-  answers.slice(1).forEach(r => {
-    const voter = playerMap[r[0]];
-    const choice = r[2];
-    if (!scores[choice]) scores[choice] = 0;
-    scores[choice]++;
-  });
-
-  return Object.keys(scores).map(name => ({ candidate: name, votes: scores[name] }))
-    .sort((a,b) => b.votes - a.votes);
-}
-
 function getAdminPlayerList() {
-  const sheet = getOrCreateSheet('Players');
+  const sheet = findBestSheet('Players');
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
 
@@ -225,48 +130,61 @@ function getAdminPlayerList() {
     }));
 }
 
-function getPlayer(playerId) {
-  const data = getOrCreateSheet('Players').getDataRange().getValues();
-  const targetId = String(playerId || '').trim();
-  for (let i = 1; i < data.length; i++) {
-    const sheetId = String(data[i][1] || '').trim();
-    if (sheetId === targetId) return { name: data[i][0], deviceToken: String(data[i][2] || '').trim() };
-  }
-  return null;
+// --- Logic & Database Helpers ---
+
+function calculateResults() {
+  const answers = getOrCreateSheet('Answers').getDataRange().getValues();
+  const players = findBestSheet('Players').getDataRange().getValues();
+  const playerMap = {};
+  players.slice(1).forEach(r => playerMap[r[1]] = r[0]);
+
+  const scores = {};
+  // Find latest vote for each question
+  const uniqueVotes = {};
+  answers.slice(1).forEach(r => {
+    const voter = playerMap[r[0]]; // Translate ID to Name
+    const choice = r[2];
+    uniqueVotes[r[0] + '-' + r[1]] = choice;
+  });
+  
+  Object.values(uniqueVotes).forEach(choice => {
+    scores[choice] = (scores[choice] || 0) + 1;
+  });
+
+  return Object.keys(scores).map(name => ({ candidate: name, votes: scores[name] }))
+    .sort((a,b) => b.votes - a.votes);
 }
 
 function getAnsweredCount(playerId) {
   const data = getOrCreateSheet('Answers').getDataRange().getValues();
-  return data.slice(1).filter(r => r[0] === playerId).length;
+  return [...new Set(data.slice(1).filter(r => r[0] === playerId).map(v => v[1]))].length;
 }
 
-function updatePlayerCompletion(playerId) {
-  const sheet = getOrCreateSheet('Players');
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][1] === playerId) {
-      sheet.getRange(i+1, 5).setValue(new Date());
-      SpreadsheetApp.flush();
-      return;
-    }
-  }
-}
-
-function clearSheetData(name, preserveNames) {
-  const sheet = getOrCreateSheet(name);
-  const last = sheet.getLastRow();
-  if (last < 2) return;
+function findBestSheet(targetName) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
-  if (preserveNames) {
-    const maxCols = sheet.getMaxColumns();
-    const colsToClear = Math.min(4, maxCols > 1 ? maxCols - 1 : 0);
-    if (colsToClear > 0) {
-      sheet.getRange(2, 2, last - 1, colsToClear).clearContent();
+  // 1. Try exact name first
+  let s = ss.getSheetByName(targetName);
+  if (s && s.getLastRow() > 1) return s;
+  
+  // 2. Look for any sheet that has data in Column A that looks like Names
+  const sheets = ss.getSheets();
+  for (let sheet of sheets) {
+    if (sheet.getLastRow() > 1 && String(sheet.getRange(1,1).getValue()).toLowerCase().includes('name')) {
+      return sheet;
     }
-  } else {
-    sheet.deleteRows(2, last - 1);
   }
-  SpreadsheetApp.flush();
+  
+  // 3. Fallback to just creating it
+  if (!s) s = ss.insertSheet(targetName);
+  return s;
+}
+
+function getOrCreateSheet(name) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  return sheet;
 }
 
 let _settingsCache = null;
@@ -296,32 +214,6 @@ function setSetting(key, value) {
   SpreadsheetApp.flush();
 }
 
-function getOrCreateSheet(name) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) sheet = ss.insertSheet(name);
-  return sheet;
-}
-
-function debugLog(msg) {
-  try {
-    console.log(msg);
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = getOrCreateSheet('Logs');
-    
-    // Add new log at the top (Insert after header)
-    sheet.appendRow([new Date(), '🚀 ' + String(msg)]);
-    
-    // Keep it tidy: Trim to last 200 logs if it gets too long
-    const lastRow = sheet.getLastRow();
-    if (lastRow > 210) {
-      sheet.deleteRows(2, lastRow - 200);
-    }
-  } catch (e) {
-    console.error('Logging failed: ' + e.toString());
-  }
-}
-
 function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -330,8 +222,6 @@ function setup() {
   getOrCreateSheet('Config');
   getOrCreateSheet('Players');
   getOrCreateSheet('Answers');
-  getOrCreateSheet('Bachelors');
-  getOrCreateSheet('Questions');
   setSetting('GAME_STATE', 'JOINING');
   SpreadsheetApp.flush();
 }

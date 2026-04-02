@@ -21,7 +21,8 @@ const state = {
   bachelors: ["Alfie", "Ben", "Theo", "Max", "Harry", "Tom", "Jack", "Ollie", "James", "Sam", "Ryan", "Chris", "Dom", "Luca"],
   isPolling: false,
   errorHUD: null,
-  version: '2.8.2'
+  version: '2.8.3',
+  debugInfo: null
 };
 
 // --- Early Population ---
@@ -90,6 +91,7 @@ async function poll() {
     state.answeredCount = data.answeredCount || 0;
     if (data.results) state.results = data.results;
     if (data.allPlayers) state.allPlayers = data.allPlayers;
+    if (data.debug) state.debugInfo = data.debug;
     
     if (state.playerId && state.playerName && data.status === 'reset') {
        state.playerId = null;
@@ -178,6 +180,10 @@ async function renderJoin() {
     : [];
 
   const syncStatus = (state.allPlayers && state.allPlayers.length > 0) ? '' : '<p style="color:#ff6666; font-size:10px; margin-top:20px;">🚨 Backend sync pending... check your sheet ID</p>';
+  
+  const debugText = state.debugInfo 
+    ? `S: ${state.debugInfo.sheetFound} | P: ${state.debugInfo.playerCount} | ID: ${state.debugInfo.targetId}`
+    : 'Waiting for sync...';
 
   app.innerHTML = `
     <div class="screen">
@@ -199,7 +205,10 @@ async function renderJoin() {
         <button id="joinBtn" disabled style="margin-top: 20px;">Join game</button>
         <p id="joinError" style="color: #ff9999; font-size: 0.8rem; margin-top: 12px; display: none;"></p>
         ${syncStatus}
-        <div style="font-size:8px; opacity:0.3; margin-top:20px; text-align:center;">V${state.version}</div>
+        <div style="font-size:8px; opacity:0.3; margin-top:20px; text-align:center;">
+          V${state.version} <br/>
+          ${debugText}
+        </div>
       </div>
     </div>
     <img src="bachelorette.png" class="bachelorette-image" style="z-index: 500;">
