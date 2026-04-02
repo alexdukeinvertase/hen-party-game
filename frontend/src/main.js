@@ -276,7 +276,7 @@ function renderResults() {
   app.innerHTML = `
     <div class="screen" style="padding: 40px 10px; max-height: none; overflow-y: auto; justify-content: flex-start;">
       <div class="glass-card">
-        <h1 style="font-size: 1.5rem;">Evening Gala Results</h1>
+        <h1 style="font-size: 1.5rem;">And the Bachelor is...</h1>
         <p style="margin-bottom: 32px; opacity: 0.7;">The roses have been tallied.</p>
         
         <div class="results-list">
@@ -286,12 +286,10 @@ function renderResults() {
                 <span class="rank" style="opacity: 0.5; font-size: 0.8rem; margin-right: 8px;">#${i + 1}</span>
                 ${r.candidate}
               </div>
-              <div class="row-value">${r.votes} votes</div>
+              <div class="row-value">${r.votes} ${r.votes === 1 ? 'vote' : 'votes'}</div>
             </div>
           `).join('') || '<p style="opacity: 0.4;">Waiting for tally...</p>'}
         </div>
-        
-        <button onclick="location.hash='#admin'" style="margin-top: 40px; padding: 12px;" class="ghost-btn">Host Dashboard</button>
       </div>
     </div>
   `;
