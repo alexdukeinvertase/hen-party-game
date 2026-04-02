@@ -103,12 +103,12 @@ label, .label-pill {
 
 #app {
   width: 100%;
-  max-width: 380px;
+  max-width: 600px;
   min-height: 100vh;
   padding: 40px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Centered, but will allow overflow scroll */
+  justify-content: center;
   align-items: center;
   position: relative;
   z-index: 100; /* Force above background */
@@ -125,11 +125,12 @@ label, .label-pill {
 }
 
 .glass-card {
-  background-color: #242322; /* Lightened for clear contrast */
+  background-color: #242322;
   border: 1px solid rgba(255, 255, 255, 0.1); 
   border-radius: var(--radius-card);
   padding: 3rem 2rem;
   width: 100%;
+  max-width: 420px;
   box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
   text-align: center;
   position: relative;
@@ -243,6 +244,7 @@ select {
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin: 32px 0;
+  width: 100%;
 }
 
 @media (min-width: 600px) {

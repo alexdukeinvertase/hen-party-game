@@ -18,7 +18,8 @@ const state = {
   answeredCount: 0,
   results: [],
   allPlayers: [],
-  bachelors: ["Alfie", "Ben", "Theo", "Max", "Harry", "Tom", "Jack", "Ollie", "James", "Sam", "Ryan", "Chris", "Dom", "Luca"],
+  bachelors: [],
+  questions: [],
   isPolling: false,
   errorHUD: null,
   version: '2.8.3',
@@ -91,6 +92,8 @@ async function poll() {
     state.answeredCount = data.answeredCount || 0;
     if (data.results) state.results = data.results;
     if (data.allPlayers) state.allPlayers = data.allPlayers;
+    if (data.bachelors && data.bachelors.length > 0) state.bachelors = data.bachelors;
+    if (data.questions && data.questions.length > 0) state.questions = data.questions;
     if (data.debug) state.debugInfo = data.debug;
     
     if (state.playerId && state.playerName && data.status === 'reset') {
@@ -296,7 +299,9 @@ function renderResults() {
 
 function renderVoting() {
   const currentQIndex = state.answeredCount;
-  const questions = [
+  
+  // Use cloud questions if available, otherwise fallback
+  const questionsList = (state.questions && state.questions.length > 0) ? state.questions : [
     "Who’s most likely to say they’re looking for a \"high-value woman\"?",
     "Who’s most likely to say they \"don’t really like Little Wayne\"?",
     "Who’s most likely to stage a rose scavenger hunt around Hertford on your first date?",
@@ -308,12 +313,16 @@ function renderVoting() {
     "Who says \"all wine tastes the same\"?",
     "Who’s most likely to have a secret subscription to Bonnie Blue’s OnlyFans?"
   ];
+  
+  const bachelorsList = (state.bachelors && state.bachelors.length > 0) ? state.bachelors : ["Alfie", "Ben", "Theo", "Max", "Harry", "Tom", "Jack", "Ollie", "James", "Sam", "Ryan", "Chris", "Dom", "Luca"];
 
-  const question = questions[currentQIndex];
+  // Ensure we don't crash if they answer more than available questions
+  const actualIndex = Math.min(currentQIndex, questionsList.length - 1);
+  const question = questionsList[actualIndex] || "Question missing!";
   let selectedBachelor = null;
 
   app.innerHTML = `
-    <div class="screen" style="padding: 40px 0; justify-content: flex-start; align-items: flex-start; max-height: none; overflow-y: auto;">
+    <div class="screen" style="padding: 40px 0; justify-content: flex-start; max-height: none; overflow-y: auto; width: 100%;">
       <div class="question-header">
         <div class="label-pill">QUESTION ${currentQIndex + 1} OF 10</div>
         <h2 style="font-family: 'Newsreader', serif; font-weight: 300; font-style: italic; font-size: 2.2rem; line-height: 1.2;">
@@ -322,7 +331,7 @@ function renderVoting() {
       </div>
       
       <div class="tile-grid">
-        ${state.bachelors.map(b => `<div class="name-tile" data-name="${b}">${b}</div>`).join('')}
+        ${bachelorsList.map(b => `<div class="name-tile" data-name="${b}">${b}</div>`).join('')}
       </div>
       
       <footer style="width: 100%; display: flex; justify-content: center; margin-top: 48px; padding-bottom: 48px;">

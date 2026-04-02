@@ -92,7 +92,7 @@ function handleVote(playerId, token, questionId, selection) {
 // --- Admin Handlers ---
 
 function handleAdminControl(hostCode, newState, targetPlayer, adminAction) {
-  if (hostCode !== HOST_CODE) {
+  if (String(hostCode || '').trim().toUpperCase() !== HOST_CODE) {
     return jsonResponse({ status: 'error', message: 'Invalid host code' });
   }
 
