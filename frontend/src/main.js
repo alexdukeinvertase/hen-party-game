@@ -137,8 +137,9 @@ export function render() {
         else renderWaiting('Waiting for the host to start the game');
         break;
       case 'VOTING':
+        const total = (state.questions && state.questions.length > 0) ? state.questions.length : 10;
         if (!state.playerId) renderJoin();
-        else if (state.answeredCount < 10) renderVoting();
+        else if (state.answeredCount < total) renderVoting();
         else renderWaiting('All votes submitted. Waiting for results...');
         break;
       case 'RESULTS':
@@ -274,7 +275,7 @@ function renderWaiting(msg) {
         <p style="opacity: 0.8;">${msg}</p>
         <div style="margin-top: 32px;">
           <div style="font-family: 'Newsreader', serif; font-size: 5rem; font-weight: 700; color: var(--primary); font-style: italic; line-height: 1;">${state.answeredCount}</div>
-          <div class="label-pill" style="margin-top: 8px;">OF 10 VOTES PLACED</div>
+          <div class="label-pill" style="margin-top: 8px;">OF ${ (state.questions && state.questions.length > 0) ? state.questions.length : 10 } VOTES PLACED</div>
         </div>
         <div class="loader-dots" style="margin-top: 32px;"><span></span><span></span><span></span></div>
       </div>
@@ -330,9 +331,9 @@ function renderVoting() {
   let selectedBachelor = null;
 
   app.innerHTML = `
-    <div class="screen" style="padding: 40px 0; justify-content: flex-start; max-height: none; overflow-y: auto; width: 100%;">
+    <div class="screen" style="padding: 24px 0; justify-content: flex-start; max-height: none; overflow-y: auto; width: 100%;">
       <div class="question-header">
-        <div class="label-pill">QUESTION ${currentQIndex + 1} OF 10</div>
+        <div class="label-pill">QUESTION ${currentQIndex + 1} OF ${questionsList.length}</div>
         <h2 style="font-family: 'Newsreader', serif; font-weight: 300; font-style: italic; font-size: 2.2rem; line-height: 1.2;">
            ${String(question).replace(/"([^"]+)"/g, '<span style="color: var(--primary)">“$1”</span>')}
         </h2>
@@ -342,7 +343,7 @@ function renderVoting() {
         ${bachelorsList.map(b => `<div class="name-tile" data-name="${b}">${b}</div>`).join('')}
       </div>
       
-      <footer style="width: 100%; display: flex; justify-content: center; margin-top: 48px; padding-bottom: 48px;">
+      <footer style="width: 100%; display: flex; justify-content: center; margin-top: 24px; padding-bottom: 24px;">
         <button id="submitVote" disabled style="width: auto; padding: 0 54px; height: 64px;">Submit Vote <span>&rarr;</span></button>
       </footer>
     </div>

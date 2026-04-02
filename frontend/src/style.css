@@ -243,7 +243,7 @@ select {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin: 32px 0;
+  margin: 24px 0;
   width: 100%;
 }
 
@@ -256,10 +256,9 @@ select {
 
 .name-tile {
   background-color: #201f1f; /* surface-container */
-  border-radius: 1.5rem; /* Large pillish square matching reference */
-  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-pill);
   font-family: 'Newsreader', serif;
-  font-size: 1.3rem; /* Slightly smaller for squares */
+  font-size: 1.1rem;
   color: var(--on-surface);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -267,7 +266,7 @@ select {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 8px;
+  padding: 16px 12px;
 }
 
 .name-tile:hover {
@@ -303,7 +302,7 @@ select {
 /* Question Header */
 .question-header {
   text-align: left;
-  margin-bottom: 48px;
+  margin-bottom: 24px;
   width: 100%;
 }
 
